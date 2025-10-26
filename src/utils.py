@@ -4,6 +4,7 @@ import dill
 from src.exception import CustomException
 from src.logger import logging
 from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV
 
 
 def save_object(file_path: str, obj) -> None:
@@ -29,7 +30,7 @@ def save_object(file_path: str, obj) -> None:
     except Exception as e:
         raise CustomException(e, sys)
     
-def evaluate_models(X_train, y_train, X_test, y_test, models: dict):
+def evaluate_models(X_train, y_train, X_test, y_test, models: dict, params):
     """
     Evaluates multiple machine learning models and returns their performance scores.
 
@@ -39,19 +40,31 @@ def evaluate_models(X_train, y_train, X_test, y_test, models: dict):
         X_test: Testing features.
         y_test: Testing target.
         models (dict): A dictionary where keys are model names and values are model instances.
+        Param_distributions (dict): A dictionary where keys are model names and values are 
+        hyperparameter distributions for tuning.
     """
     try:
         report = {}
         for i in range(len(list(models))):
             model = list(models.values())[i]
+            para = params[list(models.keys())[i]]
+
+            
             # Train the model
-            model.fit(X_train, y_train)
+            if para:
+                gs = GridSearchCV(model, para, cv=3)
+                gs.fit(X_train, y_train)
+                best_model = gs.best_estimator_
+            else:
+                best_model = model.fit(X_train, y_train)
+
+            # mode.fit(X_train, y_train)
 
             # Predict on train data 
-            y_train_pred = model.predict(X_train)
+            y_train_pred = best_model.predict(X_train)
 
             # Predicut on test data
-            y_test_pred = model.predict(X_test)
+            y_test_pred = best_model.predict(X_test)
 
             train_model_score = r2_score(y_train, y_train_pred)
             test_model_score = r2_score(y_test, y_test_pred)
